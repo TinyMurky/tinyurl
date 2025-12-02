@@ -36,6 +36,9 @@ type Server struct {
 	listener net.Listener
 }
 
+// New creates a new server listening on the provided address that responds to
+// the http.Handler. It starts the listener (TCP), but does not start the server. If
+// an empty port is given, the server randomly chooses one.
 func New(port string) (*Server, error) {
 	// :port will listen to 0.0.0.0
 	addr := fmt.Sprintf(":%s", port)
