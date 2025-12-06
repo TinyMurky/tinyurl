@@ -20,9 +20,17 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/hashicorp/go-multierror"
+
+	"github.com/TinyMurky/tinyurl/pkg/logging"
 )
 
 // Server accecpt ip, port, net.Listener
@@ -42,7 +50,7 @@ type Server struct {
 func New(port string) (*Server, error) {
 	// :port will listen to 0.0.0.0
 	addr := fmt.Sprintf(":%s", port)
-	tcpListener, error := net.Listen("tcp", addr)
+	tcpListener, err := net.Listen("tcp", addr)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener on %s: %w", addr, err)
@@ -73,4 +81,70 @@ func NewFromListener(listener net.Listener) (*Server, error) {
 	}
 
 	return &server, nil
+}
+
+// ServeHTTP starts the server and blocks until the provided context is closed.
+// When the provided context is closed, the server is gracefully stopped with a
+// timeout of 5 seconds.
+//
+// Once a server has been stopped, it is NOT safe for reuse.
+func (s *Server) ServeHTTP(ctx context.Context, srv *http.Server) error {
+	logger := logging.FromContext(ctx)
+
+	errChan := make(chan error, 1)
+
+	// Spawn a goroutine that listens for context closure. When the context is
+	// closed, the server is stopped.
+	go func() {
+		// block until context closed
+		<-ctx.Done()
+
+		logger.Debug("server.Serve: Context close")
+
+		shutdownCtx, done := context.WithTimeout(context.Background(), 5*time.Second)
+		defer done()
+
+		logger.Debug("server.Serve: Graceful Shutting Down...")
+
+		errChan <- srv.Shutdown(shutdownCtx)
+
+	}()
+
+	// Run the server. This will block until the provided context is closed.
+	// If server shutdown correctly, it will return ErrServerClosed
+	if err := srv.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("failed to serve: %w", err)
+	}
+
+	var mutiErr *multierror.Error
+
+	if err := <-errChan; err != nil {
+		mutiErr = multierror.Append(mutiErr, fmt.Errorf("failed to shutdown server: %w", err))
+	}
+
+	return mutiErr.ErrorOrNil()
+}
+
+// ServeHTTPHandler is a convenience wrapper around ServeHTTP. It creates an
+// HTTP server using the provided handler
+func (s *Server) ServeHTTPHandler(ctx context.Context, handler http.Handler) error {
+	return s.ServeHTTP(ctx, &http.Server{
+		ReadHeaderTimeout: 10 * time.Second,
+		Handler:           handler,
+	})
+}
+
+// Addr returns the server's listening address (ip + port).
+func (s *Server) Addr() string {
+	return net.JoinHostPort(s.ip, s.port)
+}
+
+// IP returns the server's listening IP.
+func (s *Server) IP() string {
+	return s.ip
+}
+
+// Port returns the server's listening port.
+func (s *Server) Port() string {
+	return s.port
 }
