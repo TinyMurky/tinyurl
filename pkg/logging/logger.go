@@ -72,16 +72,16 @@ func NewNop() *zap.SugaredLogger {
 
 // NewLoggerFromEnv create new logger base on env:
 //   - LOG_LEVEL: determine the minimal level that logger will displace
-//   - LOG_MODE: determine if it is "development" or not
+//   - RUN_MODE: determine if it is "development" or not
 func NewLoggerFromEnv() *zap.SugaredLogger {
 	level := os.Getenv("LOG_LEVEL")
-	development := strings.ToLower(strings.TrimSpace(os.Getenv("LOG_MODE"))) == "development"
+	development := strings.ToLower(strings.TrimSpace(os.Getenv("RUN_MODE"))) == "development"
 	return New(level, development)
 }
 
 // WithLogger create new context from old ctx, and
 // store zap logger into new context
-func WithLogger(ctx context.Context, logger *zap.Logger) context.Context {
+func WithLogger(ctx context.Context, logger *zap.SugaredLogger) context.Context {
 	return context.WithValue(ctx, loggerKey, logger)
 }
 

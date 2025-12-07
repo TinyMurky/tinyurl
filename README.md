@@ -41,3 +41,6 @@ Middleware should:
 1. log input
 2. recovery
 
+# How to route net/http
+
+[![The standard library now has all you need for advanced routing in Go.](https://img.youtube.com/vi/H7tbjKFSg58/0.jpg)](https://www.youtube.com/watch?v=H7tbjKFSg58)
