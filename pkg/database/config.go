@@ -45,6 +45,7 @@ type Config struct {
 // 	}
 // }
 
+// DatabaseConfig return the config of database
 func (c *Config) DatabaseConfig() *Config {
 	return c
 }
@@ -116,6 +117,6 @@ func (c *Config) ToDSN() string {
 	// 優化 3: 確保路徑分隔符統一 (處理 Windows 路徑問題)
 	cleanPath := filepath.ToSlash(c.Path)
 
-	dsn := fmt.Sprintf("file:%s?%s", cleanPath, query.Encode())
+	dsn := fmt.Sprintf("sqlite://%s?%s", cleanPath, query.Encode())
 	return dsn
 }

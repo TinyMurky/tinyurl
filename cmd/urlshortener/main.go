@@ -50,7 +50,7 @@ func realMain(ctx context.Context) error {
 	serverEnv, err := setup.Setup(ctx, &config)
 
 	if err != nil {
-		return fmt.Errorf("setup.Setup: %w", serverEnv)
+		return fmt.Errorf("setup.Setup: %w", err)
 	}
 	defer serverEnv.Close(ctx)
 

@@ -8,9 +8,9 @@ func TestToDSN(t *testing.T) {
 		config    Config
 	}{
 		{
-			wantedDsn: "file:/home?_busy_timeout=5000&_cache_size=-2000&_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL",
+			wantedDsn: "sqlite://home?_busy_timeout=5000&_cache_size=-2000&_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL",
 			config: Config{
-				Path:        "/home",
+				Path:        "home",
 				JournalMode: "WAL",
 				BusyTimeout: 5000,     // 5秒
 				SyncMode:    "NORMAL", // 在 WAL 模式下夠安全且快
@@ -19,9 +19,9 @@ func TestToDSN(t *testing.T) {
 			},
 		},
 		{
-			wantedDsn: "file:/home?_busy_timeout=5000&_foreign_keys=off&_journal_mode=WAL",
+			wantedDsn: "sqlite://home?_busy_timeout=5000&_foreign_keys=off&_journal_mode=WAL",
 			config: Config{
-				Path:        "/home",
+				Path:        "home",
 				JournalMode: "WAL",
 				BusyTimeout: 5000,  // 5秒
 				SyncMode:    "",    // 在 WAL 模式下夠安全且快
