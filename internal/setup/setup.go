@@ -22,7 +22,15 @@ import (
 	"github.com/sethvargo/go-envconfig"
 
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
+	"github.com/TinyMurky/tinyurl/pkg/database"
+	"github.com/TinyMurky/tinyurl/pkg/logging"
 )
+
+// DatabaseConfigProvider ensures that the environment config can provide a DB config.
+// All binaries in this application connect to the database via the same method.
+type DatabaseConfigProvider interface {
+	DatabaseConfig() *database.Config
+}
 
 // Setup runs common initialization code for all servers. See SetupWith.
 func Setup(ctx context.Context, config any) (*serverenv.ServerEnv, error) {
@@ -37,7 +45,7 @@ func Setup(ctx context.Context, config any) (*serverenv.ServerEnv, error) {
 // accessing app configs. The provided interface must implement the various
 // interfaces.
 func SetupWith(ctx context.Context, config any, l envconfig.Lookuper) (*serverenv.ServerEnv, error) {
-	// logger := logging.FromContext(ctx)
+	logger := logging.FromContext(ctx)
 
 	// Build a list of mutators (can use envconfig.MutatorFunc).
 	// This list will grow as we initialize more of the
@@ -53,6 +61,20 @@ func SetupWith(ctx context.Context, config any, l envconfig.Lookuper) (*serveren
 		Mutators: mutatorFuncs,
 	}); err != nil {
 		return nil, fmt.Errorf("error loading environment variables: %w", err)
+	}
+
+	if provider, ok := config.(DatabaseConfigProvider); ok {
+		logger.Info("configuring database")
+		dbConfig := provider.DatabaseConfig()
+
+		db, err := database.NewFromEnv(ctx, dbConfig)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to database: %w", err)
+		}
+
+		serverEnvOpt := serverenv.WithDatabase(db)
+		serverEnvOpts = append(serverEnvOpts, serverEnvOpt)
 	}
 
 	return serverenv.New(ctx, serverEnvOpts...), nil

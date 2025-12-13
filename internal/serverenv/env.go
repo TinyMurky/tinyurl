@@ -15,10 +15,16 @@
 // Package serverenv defines common parameters for the sever environment.
 package serverenv
 
-import "context"
+import (
+	"context"
+
+	"github.com/TinyMurky/tinyurl/pkg/database"
+)
 
 // ServerEnv represents latent environment configuration for servers in this application.
-type ServerEnv struct{}
+type ServerEnv struct {
+	database *database.DB
+}
 
 // Option defines function types to modify the ServerEnv on creation.
 type Option func(*ServerEnv) *ServerEnv
@@ -40,5 +46,22 @@ func (s *ServerEnv) Close(ctx context.Context) error {
 		return nil
 	}
 
+	if s.database != nil {
+		s.database.Close(ctx)
+	}
+
 	return nil
+}
+
+// WithDatabase add database to serverEnv
+func WithDatabase(db *database.DB) Option {
+	return func(s *ServerEnv) *ServerEnv {
+		s.database = db
+		return s
+	}
+}
+
+// Database get database
+func (s *ServerEnv) Database() *database.DB {
+	return s.database
 }

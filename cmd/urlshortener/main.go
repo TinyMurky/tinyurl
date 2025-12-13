@@ -9,12 +9,13 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/joho/godotenv"
+
 	"github.com/TinyMurky/tinyurl/internal/setup"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
 	"github.com/TinyMurky/tinyurl/pkg/logging"
 	"github.com/TinyMurky/tinyurl/pkg/server"
-	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -46,14 +47,14 @@ func realMain(ctx context.Context) error {
 
 	var config urlshortenerconfig.Config
 
-	env, err := setup.Setup(ctx, &config)
+	serverEnv, err := setup.Setup(ctx, &config)
 
 	if err != nil {
-		return fmt.Errorf("setup.Setup: %w", err)
+		return fmt.Errorf("setup.Setup: %w", serverEnv)
 	}
-	defer env.Close(ctx)
+	defer serverEnv.Close(ctx)
 
-	urlShortenerServer := urlshortener.NewServer(&config, env)
+	urlShortenerServer := urlshortener.NewServer(&config, serverEnv)
 
 	srv, err := server.New(config.Port)
 	if err != nil {
