@@ -32,7 +32,7 @@ func TestToDSN(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		got := tc.config.ToDSN()
+		got := tc.config.ToFileDSN()
 		want := tc.wantedDsn
 
 		if got != want {

@@ -21,7 +21,7 @@ type DB struct {
 func NewFromEnv(ctx context.Context, cfg *Config) (*DB, error) {
 	logger := logging.FromContext(ctx)
 
-	dsn := cfg.ToDSN()
+	dsn := cfg.ToFileDSN()
 
 	pool, err := sql.Open("sqlite", dsn)
 

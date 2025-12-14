@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/TinyMurky/snowflake v0.0.0-20251109124617-6ca99fc9e37b // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/golang-migrate/migrate/v4 v4.19.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect

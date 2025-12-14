@@ -8,7 +8,9 @@ import "github.com/TinyMurky/tinyurl/pkg/database"
 type Config struct {
 	Database database.Config
 
-	Port string `env:"PORT"`
+	IDGenerator    IDGeneratorConfig
+	Port           string `env:"PORT"`
+	ShortURLPrefix string `env:"SHORT_URL_Prefix, default=http://localhost:3000"`
 }
 
 // DatabaseConfig return Database config

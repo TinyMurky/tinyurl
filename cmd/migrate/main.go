@@ -86,7 +86,7 @@ func realMain(ctx context.Context) error {
 	// ./migrate.out -path="/path/to/migrations" (need / at the front of path)
 	migrateSQLDir := fmt.Sprintf("file://%s", *pathFlag)
 
-	m, err := migrate.New(migrateSQLDir, config.ToDSN())
+	m, err := migrate.New(migrateSQLDir, config.ToSQLiteDSN())
 
 	if err != nil {
 		return fmt.Errorf("failed create migrate: %w, migration path:%q", err, migrateSQLDir)

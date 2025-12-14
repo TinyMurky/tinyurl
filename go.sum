@@ -1,3 +1,5 @@
+github.com/TinyMurky/snowflake v0.0.0-20251109124617-6ca99fc9e37b h1:WmCLQ6kqlWIcj3zPYafxfRxGZHDV5pTv3ySye1/fonU=
+github.com/TinyMurky/snowflake v0.0.0-20251109124617-6ca99fc9e37b/go.mod h1:3P0lbiaKoCOLdh//o/4/h6r2W0wjXXLXovJgI7oCzRc=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=

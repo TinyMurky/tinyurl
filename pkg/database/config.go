@@ -50,8 +50,19 @@ func (c *Config) DatabaseConfig() *Config {
 	return c
 }
 
+// ToFileDSN transfer config to file DSN
+func (c *Config) ToFileDSN() string {
+	return c.ToDSN("file")
+}
+
+// ToSQLiteDSN transfer config to sqlite DSN
+func (c *Config) ToSQLiteDSN() string {
+	return c.ToDSN("sqlite")
+}
+
 // ToDSN transfer config to  DSN
-func (c *Config) ToDSN() string {
+// driver can be "sqlite" or "file"
+func (c *Config) ToDSN(driver string) string {
 	if c == nil || c.Path == "" {
 		return ""
 	}
@@ -117,6 +128,6 @@ func (c *Config) ToDSN() string {
 	// 優化 3: 確保路徑分隔符統一 (處理 Windows 路徑問題)
 	cleanPath := filepath.ToSlash(c.Path)
 
-	dsn := fmt.Sprintf("sqlite://%s?%s", cleanPath, query.Encode())
+	dsn := fmt.Sprintf("%s://%s?%s", driver, cleanPath, query.Encode())
 	return dsn
 }

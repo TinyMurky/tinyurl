@@ -7,6 +7,7 @@ import (
 
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
 	handlegetshorturl "github.com/TinyMurky/tinyurl/internal/urlshortener/api/v1/handle_get_shorturl"
+	handlepostdatashorten "github.com/TinyMurky/tinyurl/internal/urlshortener/api/v1/handle_post_data_shorten"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
 )
 
@@ -33,7 +34,10 @@ func (a *Handler) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	getShortURLHandler := handlegetshorturl.New(a.config, a.env)
+	postDataShortenHandler := handlepostdatashorten.New(a.config, a.env)
+
 	mux.Handle("GET /shortUrl/{id}", getShortURLHandler)
+	mux.Handle("POST /data/shorten", postDataShortenHandler)
 
 	return mux
 }
