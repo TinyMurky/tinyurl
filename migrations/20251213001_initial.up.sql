@@ -10,4 +10,7 @@
         -- (選用) 建議加上建立時間，方便日後維護
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+
+CREATE UNIQUE INDEX IF NOT EXISTS long_url_unique_index ON urls (long_url)
 -- COMMIT;
