@@ -61,7 +61,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := logging.FromContext(ctx).Named("handel_post_data_shorten")
 
-	var contentType string = "application/x-www-form-urlencoded"
+	var contentType = "application/x-www-form-urlencoded"
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -95,7 +95,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := h.createUrl(ctx, longURL)
+	shortURL, err := h.createURL(ctx, longURL)
 
 	if err != nil {
 		msg := fmt.Sprintf("create url error: %s", err.Error())
@@ -113,7 +113,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("method", r.Method, "response", res)
 }
 
-func (h *Handler) createUrl(ctx context.Context, longURL string) (string, error) {
+func (h *Handler) createURL(ctx context.Context, longURL string) (string, error) {
 	u, err := h.db.GetFirstByLongURL(ctx, longURL)
 
 	if err != nil {
@@ -147,7 +147,7 @@ func (h *Handler) genTinyURL(id snowflake.SID) (string, error) {
 		return "", fmt.Errorf("config.ShortURLPrefix %q is not valid", urlPath)
 	}
 
-	shortURL, err := url.JoinPath(urlPath, id.Base62())
+	shortURL, err := url.JoinPath(urlPath, "api", "v1", "shortUrl", id.Base62())
 
 	if err != nil {
 		return "", fmt.Errorf("url join path err: %w", err)

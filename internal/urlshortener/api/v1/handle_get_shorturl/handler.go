@@ -3,11 +3,14 @@
 package handlegetshorturl
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/database"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/model"
 	"github.com/TinyMurky/tinyurl/pkg/logging"
 )
 
@@ -17,6 +20,7 @@ import (
 type Handler struct {
 	config *urlshortenerconfig.Config
 	env    *serverenv.ServerEnv
+	db     *database.URLShortenerDB
 }
 
 var _ http.Handler = (*Handler)(nil)
@@ -24,9 +28,12 @@ var _ http.Handler = (*Handler)(nil)
 // New will return http.Handler that can
 // get snowflake ID and return original longer url
 func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
+	db := database.New(env.Database())
+
 	return &Handler{
 		config: cfg,
 		env:    env,
+		db:     db,
 	}
 }
 
@@ -35,35 +42,50 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := logging.FromContext(ctx).Named("handel_get_shorturl")
 
 	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		http.Error(w, "Method Not allow", http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 
 	if len(id) == 0 {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "Bad Request: id not provided", http.StatusBadRequest)
 		return
 	}
 
-	format := `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1> %s </h1>
-</body>
-</html>
-`
+	url, err := model.NewURLFromBase62(id)
 
-	responseHTML := fmt.Sprintf(format, id)
+	if err != nil {
+		http.Error(w, "invalid idL not base62", http.StatusBadRequest)
+		return
+	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, responseHTML)
-	logger.Debug("method", r.Method, "id", id)
+	longURL, err := h.findURL(ctx, url)
+
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("findURL: %s", err.Error())
+		return
+	}
+
+	http.Redirect(w, r, longURL, http.StatusMovedPermanently)
+	logger.Debug("method=", r.Method, "id=", id, "tinyURL=", longURL)
+}
+
+func (h *Handler) findURL(ctx context.Context, url *model.URL) (string, error) {
+	urlFromDB, err := h.db.GetFirstByID(ctx, url.ID)
+
+	if err != nil {
+		return "", fmt.Errorf("findURL: %w", err)
+	}
+
+	if urlFromDB.IsZero() {
+		return h.genDomain(), nil
+	}
+
+	return urlFromDB.LongURL, nil
+}
+
+func (h *Handler) genDomain() string {
+	return h.config.ShortURLPrefix
 }
