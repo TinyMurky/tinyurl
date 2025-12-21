@@ -45,6 +45,17 @@ Middleware should:
 
 [![The standard library now has all you need for advanced routing in Go.](https://img.youtube.com/vi/H7tbjKFSg58/0.jpg)](https://www.youtube.com/watch?v=H7tbjKFSg58)
 
+
+# command
+
+## migrate
+
+```bash
+cd ./cmd/migrate
+go build -o migrate.out
+./migrate.out -path="../../migrations"
+```
+
 # 未來流程規劃
 
 ```mermaid
@@ -61,7 +72,7 @@ graph TD
         UpdateBF --> UpdateCache[5. 寫入 Cache]
     end
 
-    subgraph "Read Path(100000000/24/60/60還原網址)"
+    subgraph "Read Path (還原網址)"
         Server --> BF_Check{A. Bloom Filter<br/>檢查是否存在?}
         BF_Check -- 絕對不存在 --> 404[直接回傳 404]
         BF_Check -- 可能存在 --> CacheCheck{B. Cache 查詢<br/>Redis}
