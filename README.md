@@ -98,3 +98,8 @@ graph TD
     DB_Query -.-> DB
     UpdateBF -.-> Redis
 ```
+
+# how to debug
+
+1. enter `make up-debug` in consule
+2. use vscode dbug and launch `Connect to Docker Debug`
