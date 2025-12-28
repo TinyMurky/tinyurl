@@ -1,0 +1,38 @@
+# Check this: https://medium.com/@mecreate/dockerizing-a-go-application-a-complete-guide-with-best-practices-5648d4eb362c
+FROM golang:1.25.1-alpine
+
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Taipei /etc/localtime && \
+    echo "Asia/Taipei" > /etc/timezone
+
+# Run the application
+ENV TZ=Asia/Taipei
+
+# install debug tool
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+# Set working directory
+WORKDIR /tinyurl/
+# Copy Go modules and dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+# Copy source code
+COPY . .
+
+WORKDIR /tinyurl/cmd/urlshortener
+
+
+# Build the application with debugging flags:
+# -gcflags="all=-N -l" disables optimization and inlining, which improves debugging.
+# CGO_ENABLED=0 is often required for static compilation in Alpine-based images.
+ENV CGO_ENABLED=0 GOOS=linux
+RUN go build -gcflags="all=-N -l" -o urlshortener.out .
+
+USER root
+# Expose the application port
+EXPOSE 3000 40000
+
+# Run the application using Delve in headless mode, listening on port 40000.
+# --accept-multiclient: 允許多次連接
+CMD ["dlv", "--listen=:40000", "--headless=true", "--api-version=2", "--accept-multiclient", "exec", "./urlshortener.out"]
+

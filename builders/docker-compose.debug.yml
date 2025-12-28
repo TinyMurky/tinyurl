@@ -1,0 +1,28 @@
+services:
+  redis:
+    image: redis:8.2.3-alpine
+    container_name: tinyurl_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ../data/redis:/data
+    command: >
+      redis-server 
+      --save 60 1 
+      --appendonly yes 
+      --requirepass ${REDIS_PASSWORD}
+  app:
+    image: tinyurl_${RUN_MODE}_debug
+    container_name: tinyurl_go_server_debug
+    build:
+      context: .. # 指向專案根目錄，這樣 Dockerfile 才能 COPY . .
+      dockerfile: ./builders/Dockerfile.tinyurl.debug
+    env_file:
+      - ../env/.env.dev # 這是給容器內部的環境變數
+    volumes:
+      - ../data:/tinyurl/data
+    ports:
+      - "3000:3000"
+      - "40000:40000"
+    depends_on:
+      - redis

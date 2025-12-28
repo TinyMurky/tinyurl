@@ -11,6 +11,15 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/urlshortener/main.go",
             "envFile": "${workspaceFolder}/env/.env.dev"
+        },
+        {
+            "name": "Connect to Docker Debug",
+            "type": "go",
+            "request": "attach",
+            "mode": "remote",
+            "remotePath": "/tinyurl/", 
+            "port": 40000,
+            "host": "127.0.0.1"
         }
     ]
 }
