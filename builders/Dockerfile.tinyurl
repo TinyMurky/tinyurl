@@ -1,0 +1,41 @@
+# Check this: https://medium.com/@mecreate/dockerizing-a-go-application-a-complete-guide-with-best-practices-5648d4eb362c
+From golang:1.25.1-alpine AS builder
+# Set working directory
+WORKDIR /tinyurl/
+# Copy Go modules and dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+# Copy source code
+COPY . .
+
+WORKDIR /tinyurl/cmd/urlshortener
+# Build the application
+ENV CGO_ENABLED=0 GOOS=linux
+RUN go build -o urlshortener.out .
+
+# Use a minimal base image for final deployment
+FROM alpine:3.23
+
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Taipei /etc/localtime && \
+    echo "Asia/Taipei" > /etc/timezone && \
+    apk del tzdata
+
+# Run the application
+RUN adduser -D myuser
+
+ENV TZ=Asia/Taipei
+# Set working directory in the container
+
+WORKDIR /tinyurl/
+# Copy the built binary from the builder stage
+COPY --from=builder /tinyurl/cmd/urlshortener/urlshortener.out .
+
+# to save data
+# RUN mkdir /tinyurl/data
+
+
+# Expose the application port
+USER myuser
+EXPOSE 3000
+CMD ["./urlshortener.out"]

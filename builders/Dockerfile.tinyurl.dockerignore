@@ -1,0 +1,8 @@
+# .dockerignore
+builders/
+env/
+data/
+Makefile
+.git
+LICENSE
+README.md

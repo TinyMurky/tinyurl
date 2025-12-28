@@ -10,7 +10,7 @@ type Config struct {
 
 	IDGenerator    IDGeneratorConfig
 	Port           string `env:"PORT"`
-	ShortURLPrefix string `env:"SHORT_URL_Prefix, default=http://localhost:3000"`
+	ShortURLPrefix string `env:"SHORT_URL_PREFIX, default=http://localhost:3000"`
 }
 
 // DatabaseConfig return Database config

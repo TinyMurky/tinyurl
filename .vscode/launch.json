@@ -10,6 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/urlshortener/main.go",
+            "envFile": "${workspaceFolder}/env/.env.dev"
         }
     ]
 }
