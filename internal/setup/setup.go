@@ -22,6 +22,7 @@ import (
 	"github.com/sethvargo/go-envconfig"
 
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
+	"github.com/TinyMurky/tinyurl/pkg/cache"
 	"github.com/TinyMurky/tinyurl/pkg/database"
 	"github.com/TinyMurky/tinyurl/pkg/logging"
 )
@@ -30,6 +31,11 @@ import (
 // All binaries in this application connect to the database via the same method.
 type DatabaseConfigProvider interface {
 	DatabaseConfig() *database.Config
+}
+
+// CacheConfigProvider ensures that the environment config can provide a cache config.
+type CacheConfigProvider interface {
+	CacheConfig() *cache.Config
 }
 
 // Setup runs common initialization code for all servers. See SetupWith.
@@ -74,6 +80,20 @@ func SetupWith(ctx context.Context, config any, l envconfig.Lookuper) (*serveren
 		}
 
 		serverEnvOpt := serverenv.WithDatabase(db)
+		serverEnvOpts = append(serverEnvOpts, serverEnvOpt)
+	}
+
+	if provider, ok := config.(CacheConfigProvider); ok {
+		logger.Info("configuring cache")
+		cacheConfig := provider.CacheConfig()
+
+		cache, err := cache.NewFromEnv(ctx, cacheConfig)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to cache: %w", err)
+		}
+
+		serverEnvOpt := serverenv.WithCache(cache)
 		serverEnvOpts = append(serverEnvOpts, serverEnvOpt)
 	}
 

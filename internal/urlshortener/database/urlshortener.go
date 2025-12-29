@@ -13,10 +13,12 @@ import (
 	"github.com/TinyMurky/tinyurl/pkg/database"
 )
 
+// URLShortenerDB store id and longURL
 type URLShortenerDB struct {
 	db *database.DB
 }
 
+// New create a new URLShortenerDB
 func New(db *database.DB) *URLShortenerDB {
 	return &URLShortenerDB{
 		db: db,

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/TinyMurky/tinyurl/internal/cache"
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener/database"
@@ -20,6 +21,7 @@ import (
 type Handler struct {
 	config *urlshortenerconfig.Config
 	env    *serverenv.ServerEnv
+	cache  *cache.URLShortenerCache
 	db     *database.URLShortenerDB
 }
 
@@ -28,11 +30,14 @@ var _ http.Handler = (*Handler)(nil)
 // New will return http.Handler that can
 // get snowflake ID and return original longer url
 func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
+
+	cache := cache.New(env.Cache())
 	db := database.New(env.Database())
 
 	return &Handler{
 		config: cfg,
 		env:    env,
+		cache:  cache,
 		db:     db,
 	}
 }
@@ -53,14 +58,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := model.NewURLFromBase62(id)
+	u, err := model.NewURLFromBase62(id)
 
 	if err != nil {
 		http.Error(w, "invalid idL not base62", http.StatusBadRequest)
 		return
 	}
 
-	longURL, err := h.findURL(ctx, url)
+	longURL, err := h.findURL(ctx, u)
 
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)

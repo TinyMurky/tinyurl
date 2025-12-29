@@ -5,7 +5,7 @@ DEBUG_COMPOSE_PATH := ./builders/docker-compose.debug.yml
 
 up:
 	@echo "Starting Docker with environment: $(ENV)..."
-	docker compose -f $(COMPOSE_PATH) --env-file $(ENV_PATH) up -d
+	docker compose -f $(COMPOSE_PATH) --env-file $(ENV_PATH) up --build -d
 
 down:
 	docker compose -f $(COMPOSE_PATH) --env-file $(ENV_PATH) down
@@ -21,7 +21,7 @@ log:
 
 up-debug:
 	@echo "Starting Debug Docker with environment: $(ENV)..."
-	docker compose -f $(DEBUG_COMPOSE_PATH) --env-file $(ENV_PATH) up -d
+	docker compose -f $(DEBUG_COMPOSE_PATH) --env-file $(ENV_PATH) up --build -d
 
 down-debug:
 	docker compose -f $(DEBUG_COMPOSE_PATH) --env-file $(ENV_PATH) down

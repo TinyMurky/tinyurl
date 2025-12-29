@@ -12,9 +12,10 @@ type Config struct {
 	Database database.Config
 	Cache    cache.Config
 
-	IDGenerator    IDGeneratorConfig
-	Port           string `env:"PORT"`
-	ShortURLPrefix string `env:"SHORT_URL_PREFIX, default=http://localhost:3000"`
+	IDGenerator            IDGeneratorConfig
+	Port                   string `env:"PORT"`
+	ShortURLPrefix         string `env:"SHORT_URL_PREFIX, default=http://localhost:3000"`
+	RedisCacheTTLInMiliSec int    `env:"SHORT_URL_CACHE_TTL_IN_MILI_SEC, default=300000"`
 }
 
 // DatabaseConfig return Database config
