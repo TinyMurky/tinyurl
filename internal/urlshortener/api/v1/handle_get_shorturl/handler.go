@@ -3,9 +3,11 @@
 package handlegetshorturl
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"net/http"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/TinyMurky/tinyurl/internal/cache"
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
@@ -45,6 +47,7 @@ func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := logging.FromContext(ctx).Named("handel_get_shorturl")
+	cacheTTL := time.Millisecond * time.Duration(h.config.RedisCacheTTLInMiliSec)
 
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not allow", http.StatusMethodNotAllowed)
@@ -61,34 +64,48 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	u, err := model.NewURLFromBase62(id)
 
 	if err != nil {
-		http.Error(w, "invalid idL not base62", http.StatusBadRequest)
+		http.Error(w, "invalid id: not base62", http.StatusBadRequest)
 		return
 	}
 
-	longURL, err := h.findURL(ctx, u)
+	u, err = h.cache.GetLongURL(ctx, u)
+
+	if err != nil && !errors.Is(err, redis.Nil) {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("cache GetLongURL: %s", err.Error())
+		return
+	}
+
+	if !u.IsEmptyLongURL() {
+		// 找到 cache 的資料
+		http.Redirect(w, r, u.LongURL, http.StatusMovedPermanently)
+		return
+	}
+
+	u, err = h.db.GetFirstByID(ctx, u.ID)
 
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
-		logger.Errorf("findURL: %s", err.Error())
+		logger.Errorf("db findURL: %s", err.Error())
 		return
 	}
 
-	http.Redirect(w, r, longURL, http.StatusMovedPermanently)
-	logger.Debug("method=", r.Method, "id=", id, "tinyURL=", longURL)
-}
+	if u.IsEmptyLongURL() {
+		http.Error(w, "not found", http.StatusNotFound)
+		logger.Errorf("ID not found: %s", u.GetIDBase62())
+		return
+	}
 
-func (h *Handler) findURL(ctx context.Context, url *model.URL) (string, error) {
-	urlFromDB, err := h.db.GetFirstByID(ctx, url.ID)
+	err = h.cache.SetLongURL(ctx, u, cacheTTL)
 
 	if err != nil {
-		return "", fmt.Errorf("findURL: %w", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("cache SetLongURL: %s", err.Error())
+		return
 	}
 
-	if urlFromDB.IsZero() {
-		return h.genDomain(), nil
-	}
-
-	return urlFromDB.LongURL, nil
+	http.Redirect(w, r, u.LongURL, http.StatusMovedPermanently)
+	logger.Debug("method=", r.Method, "id=", id, "tinyURL=", u.LongURL)
 }
 
 func (h *Handler) genDomain() string {

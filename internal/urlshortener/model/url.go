@@ -20,6 +20,11 @@ func (u *URL) GetIDBase62() string {
 	return u.ID.Base62()
 }
 
+// IsEmptyLongURL check if longURL is empty
+func (u *URL) IsEmptyLongURL() bool {
+	return u.LongURL == ""
+}
+
 // IsZero will return that if URL is zero value
 func (u *URL) IsZero() bool {
 	if u == nil {
@@ -42,13 +47,13 @@ func NewURL(id snowflake.SID, longURL string) *URL {
 }
 
 // NewURLFromBase62 can create URL from base62 for search query
-func NewURLFromBase62(base62 string) (*URL, error) {
+func NewURLFromBase62(base62 string) (URL, error) {
 	sid, err := snowflake.ParseBase62(base62)
 	if err != nil {
-		return nil, fmt.Errorf("invalid base62 string: %w", err)
+		return URL{}, fmt.Errorf("invalid base62 string: %w", err)
 	}
 
-	return &URL{
+	return URL{
 		ID: sid,
 	}, nil
 }

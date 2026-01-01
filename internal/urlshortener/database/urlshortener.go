@@ -47,7 +47,9 @@ func (db *URLShortenerDB) GetFirstByID(ctx context.Context, sid snowflake.SID) (
 		if err == sql.ErrNoRows {
 			return model.URL{}, nil
 		}
-		return model.URL{}, fmt.Errorf("GetFirstByID scan error: %w", err)
+		return model.URL{
+			ID: sid,
+		}, fmt.Errorf("GetFirstByID scan error: %w", err)
 	}
 
 	return urlFromDB, nil
