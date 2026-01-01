@@ -3,11 +3,15 @@
 package handlegetshorturl
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"net/http"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/bloomfilter"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/cache"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener/database"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener/model"
@@ -18,9 +22,11 @@ import (
 // looking up original URL from id provided
 // It holds references to the configuration and server environment.
 type Handler struct {
-	config *urlshortenerconfig.Config
-	env    *serverenv.ServerEnv
-	db     *database.URLShortenerDB
+	config      *urlshortenerconfig.Config
+	env         *serverenv.ServerEnv
+	cache       *cache.URLShortenerCache
+	bloomFilter *bloomfilter.URLShortenerBloomFilter
+	db          *database.URLShortenerDB
 }
 
 var _ http.Handler = (*Handler)(nil)
@@ -28,18 +34,24 @@ var _ http.Handler = (*Handler)(nil)
 // New will return http.Handler that can
 // get snowflake ID and return original longer url
 func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
+
+	cache := cache.New(env.Cache())
+	bloomFilter := bloomfilter.New(env.BloomFilter(), cfg.BloomFilterConfig())
 	db := database.New(env.Database())
 
 	return &Handler{
-		config: cfg,
-		env:    env,
-		db:     db,
+		config:      cfg,
+		env:         env,
+		cache:       cache,
+		db:          db,
+		bloomFilter: bloomFilter,
 	}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := logging.FromContext(ctx).Named("handel_get_shorturl")
+	cacheTTL := time.Millisecond * time.Duration(h.config.RedisCacheTTLInMiliSec)
 
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not allow", http.StatusMethodNotAllowed)
@@ -53,39 +65,63 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := model.NewURLFromBase62(id)
+	u, err := model.NewURLFromBase62(id)
 
 	if err != nil {
-		http.Error(w, "invalid idL not base62", http.StatusBadRequest)
+		http.Error(w, "invalid id: not base62", http.StatusBadRequest)
 		return
 	}
 
-	longURL, err := h.findURL(ctx, url)
+	// check bloom filter first
+	isURLExists, err := h.bloomFilter.IsURLBase62IDExist(ctx, u)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("bloom filter IsURLBase62IDExist: %s", err.Error())
+		return
+	}
+
+	if !isURLExists {
+		http.Error(w, "not found", http.StatusNotFound)
+		logger.Errorf("ID not found: %s", u.GetIDBase62())
+		return
+	}
+
+	u, err = h.cache.GetLongURL(ctx, u)
+
+	if err != nil && !errors.Is(err, redis.Nil) {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("cache GetLongURL: %s", err.Error())
+		return
+	}
+
+	if !u.IsEmptyLongURL() {
+		// 找到 cache 的資料
+		http.Redirect(w, r, u.LongURL, http.StatusMovedPermanently)
+		return
+	}
+
+	u, err = h.db.GetFirstByID(ctx, u.ID)
 
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
-		logger.Errorf("findURL: %s", err.Error())
+		logger.Errorf("db findURL: %s", err.Error())
 		return
 	}
 
-	http.Redirect(w, r, longURL, http.StatusMovedPermanently)
-	logger.Debug("method=", r.Method, "id=", id, "tinyURL=", longURL)
-}
+	if u.IsEmptyLongURL() {
+		http.Error(w, "not found", http.StatusNotFound)
+		logger.Errorf("ID not found: %s", u.GetIDBase62())
+		return
+	}
 
-func (h *Handler) findURL(ctx context.Context, url *model.URL) (string, error) {
-	urlFromDB, err := h.db.GetFirstByID(ctx, url.ID)
+	err = h.cache.SetLongURL(ctx, u, cacheTTL)
 
 	if err != nil {
-		return "", fmt.Errorf("findURL: %w", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("cache SetLongURL: %s", err.Error())
+		return
 	}
 
-	if urlFromDB.IsZero() {
-		return h.genDomain(), nil
-	}
-
-	return urlFromDB.LongURL, nil
-}
-
-func (h *Handler) genDomain() string {
-	return h.config.ShortURLPrefix
+	http.Redirect(w, r, u.LongURL, http.StatusMovedPermanently)
+	logger.Debug("method=", r.Method, "id=", id, "tinyURL=", u.LongURL)
 }

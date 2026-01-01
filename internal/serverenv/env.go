@@ -18,12 +18,16 @@ package serverenv
 import (
 	"context"
 
+	"github.com/TinyMurky/tinyurl/pkg/bloomfilter"
+	"github.com/TinyMurky/tinyurl/pkg/cache"
 	"github.com/TinyMurky/tinyurl/pkg/database"
 )
 
 // ServerEnv represents latent environment configuration for servers in this application.
 type ServerEnv struct {
-	database *database.DB
+	database    *database.DB
+	cache       *cache.Cache
+	bloomFilter *bloomfilter.BloomFilter
 }
 
 // Option defines function types to modify the ServerEnv on creation.
@@ -64,4 +68,30 @@ func WithDatabase(db *database.DB) Option {
 // Database get database
 func (s *ServerEnv) Database() *database.DB {
 	return s.database
+}
+
+// WithCache add cache to serverEnv
+func WithCache(c *cache.Cache) Option {
+	return func(s *ServerEnv) *ServerEnv {
+		s.cache = c
+		return s
+	}
+}
+
+// Cache get cache
+func (s *ServerEnv) Cache() *cache.Cache {
+	return s.cache
+}
+
+// WithBloomFilter add bloom filter to serverEnv
+func WithBloomFilter(bf *bloomfilter.BloomFilter) Option {
+	return func(s *ServerEnv) *ServerEnv {
+		s.bloomFilter = bf
+		return s
+	}
+}
+
+// BloomFilter get Bloom Filter
+func (s *ServerEnv) BloomFilter() *bloomfilter.BloomFilter {
+	return s.bloomFilter
 }

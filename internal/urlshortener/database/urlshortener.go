@@ -13,10 +13,12 @@ import (
 	"github.com/TinyMurky/tinyurl/pkg/database"
 )
 
+// URLShortenerDB store id and longURL
 type URLShortenerDB struct {
 	db *database.DB
 }
 
+// New create a new URLShortenerDB
 func New(db *database.DB) *URLShortenerDB {
 	return &URLShortenerDB{
 		db: db,
@@ -45,7 +47,9 @@ func (db *URLShortenerDB) GetFirstByID(ctx context.Context, sid snowflake.SID) (
 		if err == sql.ErrNoRows {
 			return model.URL{}, nil
 		}
-		return model.URL{}, fmt.Errorf("GetFirstByID scan error: %w", err)
+		return model.URL{
+			ID: sid,
+		}, fmt.Errorf("GetFirstByID scan error: %w", err)
 	}
 
 	return urlFromDB, nil
