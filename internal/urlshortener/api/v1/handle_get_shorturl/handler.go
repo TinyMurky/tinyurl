@@ -9,8 +9,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/TinyMurky/tinyurl/internal/cache"
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/bloomfilter"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/cache"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener/database"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener/model"
@@ -21,10 +22,11 @@ import (
 // looking up original URL from id provided
 // It holds references to the configuration and server environment.
 type Handler struct {
-	config *urlshortenerconfig.Config
-	env    *serverenv.ServerEnv
-	cache  *cache.URLShortenerCache
-	db     *database.URLShortenerDB
+	config      *urlshortenerconfig.Config
+	env         *serverenv.ServerEnv
+	cache       *cache.URLShortenerCache
+	bloomFilter *bloomfilter.URLShortenerBloomFilter
+	db          *database.URLShortenerDB
 }
 
 var _ http.Handler = (*Handler)(nil)
@@ -34,13 +36,15 @@ var _ http.Handler = (*Handler)(nil)
 func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
 
 	cache := cache.New(env.Cache())
+	bloomFilter := bloomfilter.New(env.BloomFilter(), cfg.BloomFilterConfig())
 	db := database.New(env.Database())
 
 	return &Handler{
-		config: cfg,
-		env:    env,
-		cache:  cache,
-		db:     db,
+		config:      cfg,
+		env:         env,
+		cache:       cache,
+		db:          db,
+		bloomFilter: bloomFilter,
 	}
 }
 
@@ -65,6 +69,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "invalid id: not base62", http.StatusBadRequest)
+		return
+	}
+
+	// check bloom filter first
+	isURLExists, err := h.bloomFilter.IsURLBase62IDExist(ctx, u)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		logger.Errorf("bloom filter IsURLBase62IDExist: %s", err.Error())
+		return
+	}
+
+	if !isURLExists {
+		http.Error(w, "not found", http.StatusNotFound)
+		logger.Errorf("ID not found: %s", u.GetIDBase62())
 		return
 	}
 
@@ -106,8 +124,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, u.LongURL, http.StatusMovedPermanently)
 	logger.Debug("method=", r.Method, "id=", id, "tinyURL=", u.LongURL)
-}
-
-func (h *Handler) genDomain() string {
-	return h.config.ShortURLPrefix
 }

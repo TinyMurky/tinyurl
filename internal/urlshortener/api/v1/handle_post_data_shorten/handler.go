@@ -14,8 +14,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/TinyMurky/tinyurl/internal/cache"
 	"github.com/TinyMurky/tinyurl/internal/serverenv"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/bloomfilter"
+	"github.com/TinyMurky/tinyurl/internal/urlshortener/cache"
 	urlshortenerconfig "github.com/TinyMurky/tinyurl/internal/urlshortener/config"
 	"github.com/TinyMurky/tinyurl/internal/urlshortener/database"
 	idgenerator "github.com/TinyMurky/tinyurl/internal/urlshortener/id_generator"
@@ -36,6 +37,7 @@ type Handler struct {
 	config      *urlshortenerconfig.Config
 	env         *serverenv.ServerEnv
 	cache       *cache.URLShortenerCache
+	bloomFilter *bloomfilter.URLShortenerBloomFilter
 	db          *database.URLShortenerDB
 	idGenerator *idgenerator.Generator
 }
@@ -46,6 +48,7 @@ var _ http.Handler = (*Handler)(nil)
 // get snowflake ID and return original longer url
 func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
 	cache := cache.New(env.Cache())
+	bloomFilter := bloomfilter.New(env.BloomFilter(), cfg.BloomFilterConfig())
 	db := database.New(env.Database())
 	idGenerator, err := idgenerator.NewGenerator(cfg)
 
@@ -59,6 +62,7 @@ func New(cfg *urlshortenerconfig.Config, env *serverenv.ServerEnv) *Handler {
 		cache:       cache,
 		db:          db,
 		idGenerator: idGenerator,
+		bloomFilter: bloomFilter,
 	}
 }
 
@@ -108,6 +112,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		msg := fmt.Sprintf("create url error: %s", err.Error())
+		sendInternalError(w, msg, logger)
+		return
+	}
+
+	err = h.bloomFilter.AddURLBase62ID(ctx, u)
+
+	if err != nil {
+		msg := fmt.Sprintf("add url base 62 ID to bloom filter error: %s", err.Error())
 		sendInternalError(w, msg, logger)
 		return
 	}

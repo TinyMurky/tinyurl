@@ -9,6 +9,6 @@ import (
 // genURLKey create key to store url in cache
 func genURLKey(u model.URL) string {
 	base62ID := u.GetIDBase62()
-	key := fmt.Sprintf("urlshortener:url:base64ID:%s", base62ID)
+	key := fmt.Sprintf("urlshortener:url:base62ID:%s", base62ID)
 	return key
 }
