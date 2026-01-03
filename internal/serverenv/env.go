@@ -21,13 +21,15 @@ import (
 	"github.com/TinyMurky/tinyurl/pkg/bloomfilter"
 	"github.com/TinyMurky/tinyurl/pkg/cache"
 	"github.com/TinyMurky/tinyurl/pkg/database"
+	"github.com/TinyMurky/tinyurl/pkg/singleflight"
 )
 
 // ServerEnv represents latent environment configuration for servers in this application.
 type ServerEnv struct {
-	database    *database.DB
-	cache       *cache.Cache
-	bloomFilter *bloomfilter.BloomFilter
+	database     *database.DB
+	cache        *cache.Cache
+	bloomFilter  *bloomfilter.BloomFilter
+	singleFlight singleflight.Group
 }
 
 // Option defines function types to modify the ServerEnv on creation.
@@ -94,4 +96,17 @@ func WithBloomFilter(bf *bloomfilter.BloomFilter) Option {
 // BloomFilter get Bloom Filter
 func (s *ServerEnv) BloomFilter() *bloomfilter.BloomFilter {
 	return s.bloomFilter
+}
+
+// WithSingleFlight add single flight to serverEnv
+func WithSingleFlight(sf singleflight.Group) Option {
+	return func(s *ServerEnv) *ServerEnv {
+		s.singleFlight = sf
+		return s
+	}
+}
+
+// SingleFlight get Single Flight
+func (s *ServerEnv) SingleFlight() singleflight.Group {
+	return s.singleFlight
 }

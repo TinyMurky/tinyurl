@@ -5,14 +5,16 @@ import (
 	"github.com/TinyMurky/tinyurl/pkg/bloomfilter"
 	"github.com/TinyMurky/tinyurl/pkg/cache"
 	"github.com/TinyMurky/tinyurl/pkg/database"
+	"github.com/TinyMurky/tinyurl/pkg/singleflight"
 )
 
 // Config for urlshortener
 // it need to use github.com/sethvargo/go-envconfig package to read
 type Config struct {
-	Database    database.Config
-	Cache       cache.Config
-	BloomFilter bloomfilter.Config
+	Database     database.Config
+	Cache        cache.Config
+	BloomFilter  bloomfilter.Config
+	SingleFlight singleflight.Config
 
 	IDGenerator            IDGeneratorConfig
 	Port                   string `env:"PORT"`
@@ -33,4 +35,9 @@ func (c *Config) CacheConfig() *cache.Config {
 // BloomFilterConfig return the config of cache
 func (c *Config) BloomFilterConfig() *bloomfilter.Config {
 	return &c.BloomFilter
+}
+
+// SingleFlightConfig return the config of singleflight
+func (c *Config) SingleFlightConfig() *singleflight.Config {
+	return &c.SingleFlight
 }

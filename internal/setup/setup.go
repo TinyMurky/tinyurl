@@ -26,6 +26,7 @@ import (
 	"github.com/TinyMurky/tinyurl/pkg/cache"
 	"github.com/TinyMurky/tinyurl/pkg/database"
 	"github.com/TinyMurky/tinyurl/pkg/logging"
+	"github.com/TinyMurky/tinyurl/pkg/singleflight"
 )
 
 // DatabaseConfigProvider ensures that the environment config can provide a DB config.
@@ -42,6 +43,11 @@ type CacheConfigProvider interface {
 // BloomFilterConfigProvider ensures that the environment config can provide a cache config.
 type BloomFilterConfigProvider interface {
 	BloomFilterConfig() *bloomfilter.Config
+}
+
+// SingleFlightConfigProvider ensures that the environment config can provide a singleflight config.
+type SingleFlightConfigProvider interface {
+	SingleFlightConfig() *singleflight.Config
 }
 
 // Setup runs common initialization code for all servers. See SetupWith.
@@ -114,6 +120,15 @@ func SetupWith(ctx context.Context, config any, l envconfig.Lookuper) (*serveren
 		}
 
 		serverEnvOpt := serverenv.WithBloomFilter(bloomFilter)
+		serverEnvOpts = append(serverEnvOpts, serverEnvOpt)
+	}
+
+	if provider, ok := config.(SingleFlightConfigProvider); ok {
+		logger.Info("configuring singleflight")
+		sfConfig := provider.SingleFlightConfig()
+		sf := singleflight.New(ctx, sfConfig)
+
+		serverEnvOpt := serverenv.WithSingleFlight(sf)
 		serverEnvOpts = append(serverEnvOpts, serverEnvOpt)
 	}
 
