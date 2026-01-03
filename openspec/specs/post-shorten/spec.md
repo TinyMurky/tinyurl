@@ -3,13 +3,13 @@
 ## Endpoint
 `POST /api/v1/data/shorten`
 
-## Description
+## Purpose
 Accepts a long URL and returns a shortened URL containing a unique Base62 ID.
 
 ## Requirements
 
 ### Requirement: Create Short URL
-The system must generate or retrieve a unique identifier for the provided URL.
+The system MUST generate or retrieve a unique identifier for the provided URL.
 
 #### Scenario: New URL
 Given a valid long URL that has not been shortened before

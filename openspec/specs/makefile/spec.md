@@ -1,12 +1,12 @@
 # Infra Spec: Makefile
 
-## Description
+## Purpose
 Provides a standard interface for common development tasks.
 
 ## Requirements
 
 ### Requirement: Lifecycle Management
-The Makefile must provide commands to start and stop the application.
+The Makefile MUST provide commands to start and stop the application.
 
 #### Scenario: Start Dev
 When `make up` is executed

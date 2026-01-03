@@ -1,19 +1,19 @@
 # Infra Spec: Docker
 
-## Description
+## Purpose
 Defines the containerized environment for development and debugging.
 
 ## Requirements
 
 ### Requirement: Development Environment
-The system must provide a standard development environment via `docker-compose.yml`.
+The system MUST provide a standard development environment via `docker-compose.yml`.
 
 #### Scenario: Service Orchestration
 When the composition is started
 Then it brings up the `tinyurl` service, `redis`, and any other dependencies defined in `builders/docker-compose.yml`.
 
 ### Requirement: Debug Environment
-The system must provide a debug-ready environment via `docker-compose.debug.yml`.
+The system MUST provide a debug-ready environment via `docker-compose.debug.yml`.
 
 #### Scenario: Debug Attachment
 When the debug composition is started
